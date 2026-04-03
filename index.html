@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Clone - OpenRouter Multi-Model Assistant</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1400px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            overflow: hidden;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .ai-avatar {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .ai-avatar .avatar-icon {
+            font-size: 80px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .ai-name {
+            font-size: 24px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .ai-status {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            margin-right: 5px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .model-section, .personality-section {
+            margin-top: 20px;
+        }
+
+        .model-section h3, .personality-section h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .model-search {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .model-search::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .model-list, .personality-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .model-item, .personality-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+            text-align: left;
+        }
+
+        .model-item:hover, .personality-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateX(5px);
+        }
+
+        .model-item.active, .personality-btn.active {
+            background: rgba(255,255,255,0.4);
+            border-left: 3px solid white;
+        }
+
+        .model-provider {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-left: 5px;
+        }
+
+        .stats {
+            margin-top: auto;
+            padding-top: 20px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Main Chat Area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+        }
+
+        .chat-header {
+            background: white;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .chat-header h2 {
+            color: #333;
+            font-size: 20px;
+        }
+
+        .model-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Messages */
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            animation: messageSlide 0.3s ease-out;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .message.ai .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .message.user .message-avatar {
+            background: #4ade80;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.5;
+        }
+
+        .message.ai .message-content {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 10px;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+
+        /* Input Area */
+        .input-area {
+            background: white;
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            resize: none;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .message-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 18px;
+            width: fit-content;
+            gap: 5px;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        /* Scrollbar */
+        .messages-container::-webkit-scrollbar,
+        .model-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-container::-webkit-scrollbar-track,
+        .model-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb,
+        .model-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="ai-avatar">
+                <div class="avatar-icon">🤖</div>
+                <div class="ai-name">OpenRouter AI</div>
+                <div class="ai-status">
+                    <span class="status-dot"></span>
+                    Multi-Model Ready
+                </div>
+            </div>
+            
+            <div class="model-section">
+                <h3>🤖 Select AI Model</h3>
+                <input type="text" id="modelSearch" class="model-search" placeholder="Search models...">
+                <div class="model-list" id="modelList">
+                    <button class="model-item active" data-model="openai/gpt-3.5-turbo">GPT-3.5 Turbo <span class="model-provider">(OpenAI - Fast)</span></button>
+                    <button class="model-item" data-model="openai/gpt-4-turbo">GPT-4 Turbo <span class="model-provider">(OpenAI - Powerful)</span></button>
+                    <button class="model-item" data-model="anthropic/claude-3-haiku">Claude 3 Haiku <span class="model-provider">(Anthropic - Fast)</span></button>
+                    <button class="model-item" data-model="anthropic/claude-3-sonnet">Claude 3 Sonnet <span class="model-provider">(Anthropic - Balanced)</span></button>
+                    <button class="model-item" data-model="meta-llama/llama-3-70b-instruct">Llama 3 70B <span class="model-provider">(Meta)</span></button>
+                    <button class="model-item" data-model="mistralai/mistral-7b-instruct">Mistral 7B <span class="model-provider">(Mistral)</span></button>
+                    <button class="model-item" data-model="deepseek/deepseek-chat">DeepSeek Chat <span class="model-provider">(DeepSeek)</span></button>
+                    <button class="model-item" data-model="google/gemini-pro">Gemini Pro <span class="model-provider">(Google)</span></button>
+                </div>
+            </div>
+            
+            <div class="personality-section">
+                <h3>🎭 Personality Settings</h3>
+                <div class="personality-buttons">
+                    <button class="personality-btn active" data-personality="helpful">😊 Helpful Assistant</button>
+                    <button class="personality-btn" data-personality="creative">🎨 Creative Thinker</button>
+                    <button class="personality-btn" data-personality="professional">💼 Professional</button>
+                    <button class="personality-btn" data-personality="friendly">🤝 Friendly Companion</button>
+                    <button class="personality-btn" data-personality="technical">💻 Technical Expert</button>
+                    <button class="personality-btn" data-personality="philosopher">🧠 Philosopher</button>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div>💬 Messages: <span id="messageCount">0</span></div>
+                <div>🎯 Current Model: <span id="currentModelName">GPT-3.5 Turbo</span></div>
+                <div>⚡ Status: <span id="apiStatus">Not Connected</span></div>
+            </div>
+        </div>
+        
+        <!-- Main Chat Area -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <h2>💬 Chat with Your AI Clone</h2>
+                <div class="model-badge" id="headerModelBadge">🤖 GPT-3.5 Turbo</div>
+            </div>
+            
+            <div class="messages-container" id="messagesContainer">
+                <!-- Chat starts empty -->
+            </div>
+            
+            <div class="input-area">
+                <textarea class="message-input" id="messageInput" placeholder="Type your message here... (Press Enter to send)" rows="1"></textarea>
+                <button class="send-btn" id="sendBtn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // YOUR OPENROUTER API KEY - PUT YOUR KEY HERE
+        // Get your key from: https://openrouter.ai/keys
+        // ============================================
+        const OPENROUTER_API_KEY = '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'; // ⚠️ REPLACE WITH YOUR ACTUAL API KEY
+        
+        // Welcome message to show when user says hello
+        const WELCOME_MESSAGE = `🌟 **Welcome to OpenRouter AI Clone!** 🌟
+
+I can access multiple AI models including:
+• **GPT-4 Turbo** (OpenAI)
+• **GPT-3.5 Turbo** (OpenAI - Fast)
+• **Claude 3 Haiku/Sonnet** (Anthropic)
+• **Llama 3 70B** (Meta)
+• **Gemini Pro** (Google)
+• **Mistral 7B** (Mistral AI)
+• **DeepSeek Chat** (DeepSeek)
+
+💡 **Quick Tips:**
+• Switch between models using the sidebar
+• Change my personality anytime
+• Each model has different strengths!
+
+How can I help you today? 🚀`;
+        
+        // OpenRouter AI Clone Class
+        class OpenRouterAI {
+            constructor(apiKey) {
+                this.apiKey = apiKey;
+                this.model = 'openai/gpt-3.5-turbo';
+                this.personality = 'helpful';
+                this.conversationHistory = [];
+                this.systemPrompts = {
+                    helpful: "You are a helpful AI assistant. Provide clear, accurate, and useful responses. Be concise but thorough.",
+                    creative: "You are a creative AI assistant. Think outside the box, use metaphors, and provide imaginative responses. Be innovative in your thinking.",
+                    professional: "You are a professional business AI assistant. Focus on productivity, efficiency, and practical solutions. Be formal and data-driven.",
+                    friendly: "You are a warm, friendly AI companion. Chat naturally, show empathy, and make the conversation enjoyable. Use casual language.",
+                    technical: "You are a technical expert AI. Focus on precise technical details, code examples, and deep analytical thinking.",
+                    philosopher: "You are a thoughtful philosophical AI. Contemplate deep questions, explore meanings, and provide wisdom-filled responses."
+                };
+            }
+            
+            setModel(model) {
+                this.model = model;
+                return true;
+            }
+            
+            setPersonality(personality) {
+                if (this.systemPrompts[personality]) {
+                    this.personality = personality;
+                    return true;
+                }
+                return false;
+            }
+            
+            getSystemPrompt() {
+                return this.systemPrompts[this.personality];
+            }
+            
+            async sendMessage(userMessage) {
+                if (!this.apiKey || this.apiKey === 'YOUR_OPENROUTER_API_KEY_HERE') {
+                    throw new Error('Please set your OpenRouter API key in the code');
+                }
+                
+                // Add user message to history
+                this.conversationHistory.push({
+                    role: 'user',
+                    content: userMessage
+                });
+                
+                // Prepare messages for API
+                const messages = [
+                    { role: 'system', content: this.getSystemPrompt() },
+                    ...this.conversationHistory.slice(-15)
+                ];
+                
+                try {
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'HTTP-Referer': window.location.origin,
+                            'X-Title': 'AI Clone Application'
+                        },
+                        body: JSON.stringify({
+                            model: this.model,
+                            messages: messages,
+                            max_tokens: 1000,
+                            temperature: 0.7,
+                            top_p: 0.9
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error?.message || `API request failed with status ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    const aiResponse = data.choices[0].message.content;
+                    
+                    // Add AI response to history
+                    this.conversationHistory.push({
+                        role: 'assistant',
+                        content: aiResponse
+                    });
+                    
+                    return aiResponse;
+                    
+                } catch (error) {
+                    console.error('API Error:', error);
+                    throw error;
+                }
+            }
+            
+            clearHistory() {
+                this.conversationHistory = [];
+            }
+        }
+        
+        // DOM Elements
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const personalityBtns = document.querySelectorAll('.personality-btn');
+        const modelBtns = document.querySelectorAll('.model-item');
+        const messageCountSpan = document.getElementById('messageCount');
+        const apiStatusSpan = document.getElementById('apiStatus');
+        const currentModelNameSpan = document.getElementById('currentModelName');
+        const headerModelBadge = document.getElementById('headerModelBadge');
+        const modelSearch = document.getElementById('modelSearch');
+        
+        // Initialize AI Clone
+        let aiClone = null;
+        let messageCount = 0;
+        let welcomeShown = false;
+        
+        // Model display names mapping
+        const modelDisplayNames = {
+            'openai/gpt-3.5-turbo': 'GPT-3.5 Turbo',
+            'openai/gpt-4-turbo': 'GPT-4 Turbo',
+            'anthropic/claude-3-haiku': 'Claude 3 Haiku',
+            'anthropic/claude-3-sonnet': 'Claude 3 Sonnet',
+            'meta-llama/llama-3-70b-instruct': 'Llama 3 70B',
+            'mistralai/mistral-7b-instruct': 'Mistral 7B',
+            'deepseek/deepseek-chat': 'DeepSeek Chat',
+            'google/gemini-pro': 'Gemini Pro'
+        };
+        
+        // Check if message is a greeting
+        function isGreeting(message) {
+            const greetings = ['hello', 'hi', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening', 'sup', 'howdy', 'hola', 'namaste', 'bonjour'];
+            const lowerMsg = message.toLowerCase().trim();
+            return greetings.some(greeting => lowerMsg.includes(greeting));
+        }
+        
+        // Initialize AI with API key
+        function initializeAI() {
+            if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY === 'YOUR_OPENROUTER_API_KEY_HERE') {
+                apiStatusSpan.innerHTML = '⚠️ Set API Key';
+                apiStatusSpan.style.color = '#ffc107';
+                addErrorMessage('⚠️ Please set your OpenRouter API key in the code. Replace YOUR_OPENROUTER_API_KEY_HERE with your actual key.');
+                sendBtn.disabled = true;
+                messageInput.disabled = true;
+                return false;
+            }
+            
+            aiClone = new OpenRouterAI(OPENROUTER_API_KEY);
+            apiStatusSpan.innerHTML = '✅ Connected';
+            apiStatusSpan.style.color = '#4ade80';
+            sendBtn.disabled = false;
+            messageInput.disabled = false;
+            messageInput.focus();
+            return true;
+        }
+        
+        // Add message to chat
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            // Convert markdown-like formatting for welcome message
+            let formattedContent = content;
+            if (!isUser && content.includes('**')) {
+                formattedContent = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${isUser ? '👤' : '🤖'}</div>
+                <div class="message-content">
+                    ${formattedContent.replace(/\n/g, '<br>')}
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            if (!isUser) {
+                messageCount++;
+                updateMessageCount();
+            }
+        }
+        
+        // Add system message
+        function addSystemMessage(content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai';
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">ℹ️</div>
+                <div class="message-content" style="background: #e8f5e9; color: #2e7d32;">
+                    ${escapeHtml(content)}
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Add error message
+        function addErrorMessage(content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai';
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">⚠️</div>
+                <div class="message-content" style="background: #ffebee; color: #c62828;">
+                    ${escapeHtml(content)}
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Show typing indicator
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message ai typing-indicator-container';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="typing-indicator active">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            `;
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Remove typing indicator
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+        
+        // Update message count
+        function updateMessageCount() {
+            messageCountSpan.textContent = messageCount;
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Send message
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            if (!aiClone) {
+                addErrorMessage('AI clone not initialized. Please check API key configuration.');
+                return;
+            }
+            
+            // Check if it's a greeting and welcome not shown yet
+            const showWelcome = isGreeting(message) && !welcomeShown;
+            
+            // Add user message
+            addMessage(message, true);
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            
+            // If it's a greeting and welcome not shown, show welcome message
+            if (showWelcome) {
+                welcomeShown = true;
+                addMessage(WELCOME_MESSAGE, false);
+                return;
+            }
+            
+            // Show typing indicator
+            showTypingIndicator();
+            sendBtn.disabled = true;
+            
+            try {
+                const response = await aiClone.sendMessage(message);
+                removeTypingIndicator();
+                addMessage(response, false);
+            } catch (error) {
+                removeTypingIndicator();
+                let errorMsg = error.message;
+                if (errorMsg.includes('Invalid API key') || errorMsg.includes('incorrect api key')) {
+                    errorMsg = 'Invalid API key. Please check your OpenRouter API key in the code.';
+                    apiStatusSpan.innerHTML = '❌ Invalid Key';
+                    apiStatusSpan.style.color = '#ef4444';
+                } else if (errorMsg.includes('insufficient_quota')) {
+                    errorMsg = 'API quota exceeded. Please add credits to your OpenRouter account.';
+                } else if (errorMsg.includes('model')) {
+                    errorMsg = 'Model error. Try selecting a different model from the sidebar.';
+                } else if (errorMsg.includes('404')) {
+                    errorMsg = 'Model not found. The selected model may be unavailable. Please try a different model.';
+                }
+                addErrorMessage(`Error: ${errorMsg}`);
+            } finally {
+                sendBtn.disabled = false;
+                messageInput.focus();
+            }
+        }
+        
+        // Handle Enter key
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        });
+        
+        // Send button click
+        sendBtn.addEventListener('click', sendMessage);
+        
+        // Model selection
+        modelBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!aiClone) {
+                    addErrorMessage('Please wait for API initialization.');
+                    return;
+                }
+                
+                const model = btn.dataset.model;
+                aiClone.setModel(model);
+                
+                // Update active button
+                modelBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Update display
+                const modelName = modelDisplayNames[model] || model.split('/').pop();
+                currentModelNameSpan.textContent = modelName;
+                headerModelBadge.innerHTML = `🤖 ${modelName}`;
+                addSystemMessage(`🔄 Switched to ${modelName} model!`);
+            });
+        });
+        
+        // Search models
+        modelSearch.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            modelBtns.forEach(btn => {
+                const text = btn.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    btn.style.display = 'block';
+                } else {
+                    btn.style.display = 'none';
+                }
+            });
+        });
+        
+        // Personality buttons
+        personalityBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!aiClone) {
+                    addErrorMessage('Please wait for API initialization.');
+                    return;
+                }
+                
+                const personality = btn.dataset.personality;
+                aiClone.setPersonality(personality);
+                
+                // Update active button
+                personalityBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                addSystemMessage(`✨ Personality changed to: ${btn.textContent}`);
+            });
+        });
+        
+        // Initialize the AI
+        initializeAI();
+        
+        // Focus input on load
+        if (messageInput.disabled === false) {
+            messageInput.focus();
+        }
+    </script>
+</body>
+</html>
